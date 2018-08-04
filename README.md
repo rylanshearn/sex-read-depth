@@ -13,14 +13,14 @@ This aligns reads from two `fastq.gz` files onto a bowtie2 indexed reference gen
 This runs a few different commands that convert the `.sam` alignment file to `.bam`, then sorts the alignment file
 ### samtoolsdepth.sh
 This calculates the read depth at each position along the reference genome. This is piped to awk, which corrects for the number of reads and calculates the coverage ratio between two samples on the fly
-### *.pbs
-Each of the above scripts have `.pbs` scripts that communicate with the Torque job submission system. This is the place to go if you want to change some of the resource allocation for each job)
-### coveragemaster.pbs
-This script launches all of the scripts for male:female read depth analyses through their equivalent `.pbs` scripts, specifying appropriate job dependencies and some resources that are more likely to need changing between datasets. This enables you to run analyses for male and female at the same time. 
 ### samprofile.sh
 generates polymorphism profile file from a .sam alignment
 ### profilesum.sh
 This takes two snp profiles as output from sam2pro, and combines them in a single summary file
+### *.pbs
+Each of the above scripts have `.pbs` scripts that communicate with the Torque job submission system. This is the place to go if you want to change some of the resource allocation for each job)
+### coveragemaster.pbs
+This script launches all of the scripts for male:female read depth analyses through their equivalent `.pbs` scripts, specifying appropriate job dependencies and some resources that are more likely to need changing between datasets. This enables you to run analyses for male and female at the same time.
 ### snpdens.pbs
 This script launches all of the scripts for male:female SNP diversity analyses through their equivalent `.pbs` scripts, starting from read alignment and counting. You can turn off the early stages of the pipeline if they have already been completed by coveragemaster.pbs, just follow the instructions in snpdens.pbs
 
