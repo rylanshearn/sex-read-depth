@@ -46,5 +46,3 @@ git clone https://github.com/rylanshearn/sex-read-depth
 ## Usage
 usage instructions are given in `coveragemaster.pbs`, and also in each `.sh` script
 
-## License
-This program will be open for use in galaxy once published.
