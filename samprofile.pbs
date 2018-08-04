@@ -1,0 +1,4 @@
+#PBS -q q1day
+#PBS -o /output/directory/
+#PBS -e /output/directory/
+samprofile.sh $reference $sam $memory

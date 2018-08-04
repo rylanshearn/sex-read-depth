@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# ---------------------------------------------------------------------------
+# coveragemaster.pbs calculates read depth ratio along a reference genome from male and female fastq files using a series of job submission scripts
+
+# Copyright 2018, Rylan Shearn
+
+# usage: coveragemaster.pbs /path/to/reference.fasta referencename /path/to/fastqmale1 /path/to/fastqmale2 malename /path/to/fastqfemale1 /path/to/fastqfemale2 femalename
+
+# Revision history:
+# 2018.08.04
+# ---------------------------------------------------------------------------
+
+#input parameters
+reference=$1
+referencename=$2
+fastqmale1=$3
+fastqmale2=$4
+malename=$5
+fastqfem1=$6
+fastqfem2=$7
+femname=$8
+alength=$9
+
+#get output directory
+outputdir=$(dirname "${reference}") #get output directory from reference
+
+#index reference fasta with bowtie2 - no dependencies
+referenceindex=$(qsub -v reference="$reference",referenceindexed="$referencename" -N "$referencename"index bowtieindex.pbs)
+echo $referenceindex
+
+##count number of reads for male - no dependencies
+readsmale=$(qsub -v input1="$fastqmale1",input2="$fastqmale2",samplename="$malename" -N "$malename"count readscount.pbs)
+echo $readsmale
+
+##count number of reads for female - no dependencies
+readsfemale=$(qsub -v input1="$fastqfem1",input2="$fastqfem2",samplename="$femname" -N "$femname"count readscount.pbs)
+echo $readsfemale
+
+##align male reads to reference - req referenceindex
+alignmale=$(qsub -W depend=afterok:$referenceindex -v forward="$fastqmale1",reverse="$fastqmale2",reference="$referencename",output="$malename",nodes=32,alength="$alength" -N "$malename"align -l nodes=1:ppn=32,mem=3gb alignbowtie.pbs)
+echo $alignmale
+
+##align female reads to reference - req referenceindex
+alignfemale=$(qsub -W depend=afterok:$referenceindex -v forward="$fastqfem1",reverse="$fastqfem2",reference="$referencename",output="$femname",nodes=32,alength="$alength" -N "$femname"align -l nodes=1:ppn=32,mem=3gb alignbowtie.pbs)
+echo $alignfemale
+
+##sort sam file for male - req alignmale
+sortmale=$(qsub -W depend=afterok:$alignmale -v reference="$reference",sam="$outputdir"/"$malename".sam,memory=30 -N "$malename"sort -l nodes=1:ppn=1,mem=30gb samtoolssort.pbs)
+echo $sortmale
+
+##sort sam file for female - req alignfemale
+sortfemale=$(qsub -W depend=afterok:$alignfemale -v reference="$reference",sam="$outputdir"/"$femname".sam,memory=30 -N "$femname"sort -l nodes=1:ppn=1,mem=30gb samtoolssort.pbs)
+echo $sortfemale
+
+#samtools depth analysis - req sortfemale:sortmale
+depthratio=$(qsub -W depend=afterok:$sortmale:$sortfemale -v sortedbam1="$outputdir"/"$malename"_sorted.bam,sortedbam2="$outputdir"/"$femname"_sorted.bam,sample1name="$malename",sample2name="$femname",sample1readsnum="$outputdir"/"$malename""readsnum.txt",sample2readsnum="$outputdir"/"$femname""readsnum.txt" -N "$malename""$femname"ratio -l nodes=1:ppn=1,mem=10gb samtoolsdepth.pbs)
+
+echo $depthratio

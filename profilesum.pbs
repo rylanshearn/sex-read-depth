@@ -1,0 +1,4 @@
+#PBS -q q1hour
+#PBS -o /output/directory/
+#PBS -e /output/directory/
+profilesum.sh $profile1 $profile2 $sample1name $sample2name

@@ -1,0 +1,4 @@
+#PBS -q q1day
+#PBS -o /output/directory/
+#PBS -e /output/directory/
+alignbowtie.sh $reference $forward $reverse $output $nodes $alength

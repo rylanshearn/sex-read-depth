@@ -1,0 +1,4 @@
+#PBS -l walltime=24:00:00
+#PBS -o /output/directory/
+#PBS -e /output/directory/
+samtoolssort.sh $reference $sam $memory

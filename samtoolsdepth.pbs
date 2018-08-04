@@ -1,0 +1,4 @@
+#PBS -l walltime=24:00:00
+#PBS -o /output/directory/
+#PBS -e /output/directory/
+samtoolsdepth.sh $sortedbam1 $sortedbam2 $sample1name $sample2name $sample1readsnum $sample2readsnum

@@ -1,0 +1,80 @@
+#/bin/bash
+
+# ---------------------------------------------------------------------------
+# snpdens.pbs aligns reads, sorts read alignment and generates polymorphism profiles for male and female samples using a series of pbs scripts
+
+# Copyright 2018, Rylan Shearn
+
+# usage: snpdens.pbs /path/to/reference.fasta referencename /path/to/fastqmale1 /path/to/fastqmale2 malename /path/to/fastqfemale1 /path/to/fastqfemale2 femalename
+
+# to start at an intermediate stage in the pipeline, hash out the prior steps and unhash the 'no dependencies' line that you want to start from 
+
+# Revision history:
+# 2017.03.14 - created
+# ---------------------------------------------------------------------------
+
+#input parameters
+reference=$1
+referencename=$2
+fastqmale1=$3
+fastqmale2=$4
+malename=$5
+fastqfem1=$6
+fastqfem2=$7
+femname=$8
+alength=$9
+
+#get output directory
+outputdir=$(dirname "${reference}") #get output directory from reference
+
+#index reference fasta with bowtie2 - no dependencies
+referenceindex=$(qsub -v reference="$reference",referenceindexed="$referencename" -N "$referencename"index bowtieindex.pbs)
+echo $referenceindex
+
+##count number of reads for male - no dependencies
+readsmale=$(qsub -v input1="$fastqmale1",input2="$fastqmale2",samplename="$malename" -N "$malename"count readscount.pbs)
+echo $readsmale
+
+##count number of reads for female - no dependencies
+readsfemale=$(qsub -v input1="$fastqfem1",input2="$fastqfem2",samplename="$femname" -N "$femname"count readscount.pbs)
+echo $readsfemale
+
+##align male reads to reference - req referenceindex
+alignmale=$(qsub -W depend=afterok:$referenceindex -v forward="$fastqmale1",reverse="$fastqmale2",reference="$referencename",output="$malename",nodes=32,alength="$alength" -N "$malename"align -l nodes=1:ppn=32,mem=3gb alignbowtie.pbs)
+#echo $alignmale
+
+##align male reads to reference - no deps
+#alignmale=$(qsub -v forward="$fastqmale1",reverse="$fastqmale2",reference="$referencename",output="$malename",nodes=32,alength="$alength" -N "$malename"align -l nodes=1:ppn=32,mem=3gb alignbowtie.pbs)
+#echo $alignmale
+
+##align female reads to reference - req referenceindex
+alignfemale=$(qsub -W depend=afterok:$referenceindex -v forward="$fastqfem1",reverse="$fastqfem2",reference="$referencename",output="$femname",nodes=32,alength="$alength" -N "$femname"align -l nodes=1:ppn=32,mem=3gb alignbowtie.pbs)
+echo $alignfemale
+
+##align female reads to reference - no deps
+#alignfemale=$(qsub -v forward="$fastqfem1",reverse="$fastqfem2",reference="$referencename",output="$femname",nodes=32,alength="$alength" -N "$femname"align -l nodes=1:ppn=32,mem=3gb alignbowtie.pbs)
+#echo $alignfemale
+
+##generate profile for male - req alignmale
+profilemale=$(qsub -W depend=afterok:$alignmale -v reference="$reference",sam="$outputdir"/"$malename".sam,memory=30 -N "$malename"prof -l nodes=1:ppn=1,mem=30gb samprofile.pbs)
+echo $profilemale
+
+## generate profile for male - without deps
+#profilemale=$(qsub -v reference="$reference",sam="$outputdir"/"$malename".sam,memory=30 -N "$malename"prof -l nodes=1:ppn=1,mem=30gb samprofile.pbs)
+#echo $profilemale
+
+##generate profile for female - req alignfemale
+profilefemale=$(qsub -W depend=afterok:$alignfemale -v reference="$reference",sam="$outputdir"/"$femname".sam,memory=30 -N "$femname"prof -l nodes=1:ppn=1,mem=30gb samprofile.pbs)
+echo $profilefemale
+
+##generate profile for female - without deps
+#profilefemale=$(qsub -v reference="$reference",sam="$outputdir"/"$femname".sam,memory=30 -N "$femname"prof -l nodes=1:ppn=1,mem=30gb samprofile.pbs)
+#echo $profilefemale
+
+#summarizing profiles - without prior requirements
+#profilesum=$(qsub -v profile1="$outputdir"/"$malename".pro,profile2="$outputdir"/"$femname".pro,sample1name="$malename",sample2name="$femname" -N "$malename""$femname"sum -l nodes=1:ppn=1,mem=10gb profilesum.pbs)
+
+#summarizing profiles - with requirements
+profilesum=$(qsub -W depend=afterok:$profilemale:$profilefemale -v profile1="$outputdir"/"$malename"sum.pro,profile2="$outputdir"/"$femname"sum.pro,sample1name="$malename",sample2name="$femname" -N "$malename""$femname"sum -l nodes=1:ppn=1,mem=10gb profilesum.pbs)
+echo $profilesum
+
